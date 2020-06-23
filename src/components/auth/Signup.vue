@@ -26,6 +26,7 @@
 import db from "@/firebase/init"
 import slugify from "slugify"
 import * as firebase from "firebase/app"
+
 export default {
   name: "Signup",
   data() {
@@ -47,9 +48,10 @@ export default {
           remove: /[$*_+~.()'"!\-:@]/g,
           lower: true
         })
-        let ref = db.collection("users").doc(this.slug)
-        ref.get().then(doc => {
-          if (doc.exists) {
+        let checkAlias = firebase.functions().httpsCallable('checkAlias')
+        checkAlias({slug: this.slug}).then(result => {
+          console.log(result)
+          if (!result.data.unique) {
             this.feedback = "This alias is already exists"
           } else {
             // This alias does not exist in db
@@ -72,11 +74,11 @@ export default {
   },
   mounted() {
       firebase.auth().onAuthStateChanged(user => {
-          if(this.user){
+          if(user){
             db.collection("users").doc(this.slug).set({
                         alias: this.alias,
                         geolocation: null,
-                        user_id: user.uid
+                        user_id: this.user.uid
                 })
                 .then(() => this.$router.push({name: 'GMap'}))
                 .catch(err => this.feedback = err.message)
